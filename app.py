@@ -15,7 +15,7 @@ def process_apk(input_path, output_dir):
 st.title("APK File Processor")
 
 # File upload
-uploaded_file = st.file_uploader("Upload APK file", type="apk")
+uploaded_file = st.file_uploader("Upload APK file", type=['apk', 'xapk', 'apks'])
 
 # URL upload
 url_input = st.text_input("Or enter APK URL")
