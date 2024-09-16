@@ -36,7 +36,7 @@ if uploaded_file is not None:
     if result.returncode == 0:
         st.success("APK processed successfully!")
         st.write("Processing result:")
-        st.text(result.stdout)
+       # st.text(result.stdout)
         
         # Extract the patched APK file name from the stdout
         output_file_name = result.stdout.split("Patched file: ")[-1].strip()
