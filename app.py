@@ -12,8 +12,8 @@ def install_node_and_apk_mitm():
    # os.system("sudo apt-get install -y nodejs")
     
     # Install apk-mitm
-  #  st.write("Installing apk-mitm...")
-    os.system("npm install -g apk-mitm")
+    st.write("Installing apk-mitm...")
+   # os.system("npm install -g apk-mitm")
 
 # Function to process APK file
 def process_apk(file_path, output_path):
