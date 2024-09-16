@@ -11,6 +11,10 @@ RUN apt-get update && \
 
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
 
+# Install Java Development Kit (JDK)
+RUN apt-get update && \
+    apt-get install -y openjdk-11-jdk
+
 # Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
