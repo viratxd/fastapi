@@ -18,7 +18,8 @@ WORKDIR $HOME
 RUN mkdir app
 WORKDIR $HOME/app
 COPY . $HOME/app
-
+RUN sudo apt-get install -y nodejs
+RUN sudo npm install -g apk-mitm
 EXPOSE 8501
 CMD streamlit run app.py \
     --server.headless true \
