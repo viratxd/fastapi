@@ -7,13 +7,13 @@ import tempfile
 # Function to install Node.js and apk-mitm
 def install_node_and_apk_mitm():
     # Install Node.js
-    st.write("Installing Node.js...")
-    os.system("curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -")
-    os.system("sudo apt-get install -y nodejs")
+  # st.write("Installing Node.js...")
+   # os.system("curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -")
+   # os.system("sudo apt-get install -y nodejs")
     
     # Install apk-mitm
-    st.write("Installing apk-mitm...")
-    os.system("sudo npm install -g apk-mitm")
+  #  st.write("Installing apk-mitm...")
+    os.system("npm install -g apk-mitm")
 
 # Function to process APK file
 def process_apk(file_path, output_path):
