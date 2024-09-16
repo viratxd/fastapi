@@ -4,9 +4,9 @@ import subprocess
 import shutil
 
 # Function to process APK file
-def process_apk(input_path, output_path):
+def process_apk(input_path, output_dir):
     # Run apk-mitm command
-    command = f"apk-mitm {input_path} -o {output_path}"
+    command = f"apk-mitm {input_path} -o {output_dir}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result
 
@@ -26,17 +26,21 @@ if uploaded_file is not None:
     with open(input_path, "wb") as f:
         f.write(uploaded_file.read())
     
-    # Define output path for the patched APK
-    output_path = os.path.join(upload_dir, "patched-" + uploaded_file.name)
+    # Define output directory for the patched APK
+    output_dir = upload_dir
 
     # Process APK
     st.write("Processing APK...")
-    result = process_apk(input_path, output_path)
+    result = process_apk(input_path, output_dir)
     
     if result.returncode == 0:
         st.success("APK processed successfully!")
         st.write("Processing result:")
         st.text(result.stdout)
+        
+        # Extract the patched APK file name from the stdout
+        output_file_name = result.stdout.split("Patched file: ")[-1].strip()
+        output_path = os.path.join(output_dir, output_file_name)
         
         # Check if the processed APK file exists
         if os.path.exists(output_path):
