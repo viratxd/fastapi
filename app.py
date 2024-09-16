@@ -1,42 +1,62 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
+import os
+import subprocess
+import shutil
+import tempfile
 
-st.title('Uber pickups in NYC')
+# Function to install Node.js and apk-mitm
+def install_node_and_apk_mitm():
+    # Install Node.js
+    st.write("Installing Node.js...")
+    os.system("curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -")
+    os.system("sudo apt-get install -y nodejs")
+    
+    # Install apk-mitm
+    st.write("Installing apk-mitm...")
+    os.system("sudo npm install -g apk-mitm")
 
-DATE_COLUMN = 'date/time'
-DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
-            'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
+# Function to process APK file
+def process_apk(file_path, output_path):
+    # Run apk-mitm command
+    command = f"apk-mitm {file_path} -o {output_path}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    return result
 
-@st.cache_data
-def load_data(nrows):
-    data = pd.read_csv(DATA_URL, nrows=nrows)
-    lowercase = lambda x: str(x).lower()
-    data.rename(lowercase, axis='columns', inplace=True)
-    data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
-    return data
+# Streamlit app interface
+st.title("APK File Processor")
 
-data_load_state = st.text('Loading data...')
-data = load_data(10000)
-data_load_state.text("Done! (using st.cache)")
+# Install Node.js and apk-mitm if not installed
+if not shutil.which("apk-mitm"):
+    install_node_and_apk_mitm()
 
-if st.checkbox('Show raw data'):
-    st.subheader('Raw data')
-    st.write(data)
-
-st.subheader('Number of pickups by hour')
-hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
-st.bar_chart(hist_values)
-
-# Some number in the range 0-23
-hour_to_filter = st.slider('hour', 0, 23, 17)
-filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
-
-st.subheader('Map of all pickups at %s:00' % hour_to_filter)
-st.map(filtered_data)
-
-uploaded_file = st.file_uploader("Choose a file")
+# File upload
+uploaded_file = st.file_uploader("Upload APK file", type="apk")
 if uploaded_file is not None:
-    st.write(uploaded_file.name)
-    bytes_data = uploaded_file.getvalue()
-    st.write(len(bytes_data), "bytes")
+    # Create temporary file paths
+    temp_dir = tempfile.mkdtemp()
+    input_path = os.path.join(temp_dir, uploaded_file.name)
+    output_path = os.path.join(temp_dir, "patched-" + uploaded_file.name)
+    
+    # Save uploaded file
+    with open(input_path, "wb") as f:
+        f.write(uploaded_file.read())
+    
+    # Process APK
+    st.write("Processing APK...")
+    result = process_apk(input_path, output_path)
+    
+    if result.returncode == 0:
+        st.success("APK processed successfully!")
+        st.write("Processing result:")
+        st.text(result.stdout)
+        
+        # Provide download link for processed APK
+        with open(output_path, "rb") as f:
+            st.download_button(
+                label="Download Patched APK",
+                data=f,
+                file_name=os.path.basename(output_path),
+                mime="application/vnd.android.package-archive"
+            )
+    else:
+        st.error(f"Error processing APK: {result.stderr}")
