@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import subprocess
 import shutil
+import requests
 
 # Function to process APK file
 def process_apk(input_path, output_dir):
@@ -15,17 +16,33 @@ st.title("APK File Processor")
 
 # File upload
 uploaded_file = st.file_uploader("Upload APK file", type="apk")
-if uploaded_file is not None:
+
+# URL upload
+url_input = st.text_input("Or enter APK URL")
+
+if uploaded_file is not None or url_input:
     # Create directories if they don't exist
     upload_dir = "uploads"
     if not os.path.exists(upload_dir):
         os.makedirs(upload_dir)
 
-    # Save uploaded file
-    input_path = os.path.join(upload_dir, uploaded_file.name)
-    with open(input_path, "wb") as f:
-        f.write(uploaded_file.read())
-    
+    if uploaded_file is not None:
+        # Save uploaded file
+        input_path = os.path.join(upload_dir, uploaded_file.name)
+        with open(input_path, "wb") as f:
+            f.write(uploaded_file.read())
+    elif url_input:
+        # Download APK from URL
+        st.write("Downloading APK from URL...")
+        response = requests.get(url_input)
+        if response.status_code == 200:
+            input_path = os.path.join(upload_dir, os.path.basename(url_input))
+            with open(input_path, "wb") as f:
+                f.write(response.content)
+        else:
+            st.error("Failed to download APK from URL. Please check the URL and try again.")
+            st.stop()
+
     # Define output directory for the patched APK
     output_dir = upload_dir
 
@@ -36,7 +53,7 @@ if uploaded_file is not None:
     if result.returncode == 0:
         st.success("APK processed successfully!")
         st.write("Processing result:")
-       # st.text(result.stdout)
+        st.text(result.stdout)
         
         # Extract the patched APK file name from the stdout
         output_file_name = result.stdout.split("Patched file: ")[-1].strip()
