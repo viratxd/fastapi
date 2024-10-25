@@ -12,7 +12,7 @@ def process_apk(input_path, output_dir):
     st.write(f"Processed APK file found at: {result}")
     # Check if the process was successful
     if result.returncode == 0:
-        out_path = input_path.replace('.apk', '-aligned-signed.apk')
+        out_path = input_path.replace('.apk', '-aligned-debugSigned.apk')
         return out_path
     else:
         st.error(f"Error processing APK: {result.stderr}")
