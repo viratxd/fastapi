@@ -58,7 +58,7 @@ if uploaded_file is not None or url_input:
         st.text(result.stdout)
         
         # Extract the patched APK file name from the stdout
-        output_file_name = result.stdout.split("Patched file: ")[-1].strip()
+        output_file_name = result.stdout.split("Patched file: ")
         output_path = os.path.join(output_dir, output_file_name)
         
         # Check if the processed APK file exists
