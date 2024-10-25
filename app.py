@@ -9,9 +9,14 @@ def process_apk(input_path, output_dir):
     # Run apk-mitm command
     command = f"java -jar uber-apk-signer.jar --apks {input_path}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    out_path = input_path.replace('.apk', '-aligned-signed.apk')
-
-    return out_path
+    
+    # Check if the process was successful
+    if result.returncode == 0:
+        out_path = input_path.replace('.apk', '-aligned-signed.apk')
+        return out_path
+    else:
+        st.error(f"Error processing APK: {result.stderr}")
+        return None
 
 # Streamlit app interface
 st.title("APK File Processor")
@@ -52,13 +57,13 @@ if uploaded_file is not None or url_input:
     st.write("Processing APK...")
     result = process_apk(input_path, output_dir)
     
-    if result != 0:
+    if result:
         st.success("APK processed successfully!")
         st.write("Processing result:")
         st.text(result)
         
-        # Extract the patched APK file name from the stdout
-        output_file_name = result
+        # Extract the patched APK file name from the output path
+        output_file_name = os.path.basename(result)
         output_path = os.path.join(output_dir, output_file_name)
         
         # Check if the processed APK file exists
@@ -69,11 +74,10 @@ if uploaded_file is not None or url_input:
             with open(output_path, "rb") as f:
                 file_data = f.read()
                 if file_data:
-                    st.write("File data read successfully.")
                     st.download_button(
                         label="Download Patched APK",
                         data=file_data,
-                        file_name=os.path.basename(output_path),
+                        file_name=output_file_name,
                         mime="application/vnd.android.package-archive"
                     )
                 else:
@@ -81,7 +85,7 @@ if uploaded_file is not None or url_input:
         else:
             st.error("Processed APK file not found. Please try again.")
     else:
-        st.error(f"Error processing APK: {result.stderr}")
+        st.error("Failed to process APK. Please try again.")
     
     # Clean up the uploaded and processed files
     def cleanup_files(input_path, output_path):
@@ -90,4 +94,5 @@ if uploaded_file is not None or url_input:
         if os.path.exists(output_path):
             os.remove(output_path)
 
+    # Cleanup is done after download button appears to ensure the file is available for download
     cleanup_files(input_path, output_path)
