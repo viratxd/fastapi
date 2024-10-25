@@ -7,7 +7,7 @@ import requests
 # Function to process APK file
 def process_apk(input_path, output_dir):
     # Run apk-mitm command
-    command = f"apk-mitm {input_path} -o {output_dir}"
+    command = f"java -jar uber-apk-signer.jar --apks {input_path}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result
 
