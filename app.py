@@ -9,7 +9,9 @@ def process_apk(input_path, output_dir):
     # Run apk-mitm command
     command = f"java -jar uber-apk-signer.jar --apks {input_path}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return result
+    out_path = input_path.replace('.apk', '-aligned-signed.apk')
+
+    return out_path
 
 # Streamlit app interface
 st.title("APK File Processor")
