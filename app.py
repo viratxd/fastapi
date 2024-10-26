@@ -34,10 +34,10 @@ def process_xapk(xapk_path):
         os.remove(zip_path)
         
         # Run APKEditor.jar command to merge the extracted files
-        command = f"java -jar APKEditor.jar m -i {extract_dir}"
+        command = f'java -jar APKEditor.jar m -i "{extract_dir}"'
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-       # st.write(f"Merged APK created at: {result}")
-        if result:
+        
+        if result.returncode == 0:
             # Define the path for the merged APK
             merged_apk_path = os.path.join(folder, f"{name_without_ext}_merged.apk")
             st.write(f"Merged APK created at: {merged_apk_path}")
@@ -61,20 +61,28 @@ def process_sign(apk_path):
     Sign the APK file using uber-apk-signer.
     
     Args:
-        apk_path (str): Path to the APK file
+        apk_path (str): Path to the APK file to be signed.
         
     Returns:
-        str: Path to the signed APK if successful, None if failed
+        str: Path to the signed APK if successful, None if failed.
     """
     folder = os.path.dirname(apk_path)
     command = f"java -jar uber-apk-signer.jar --apks {apk_path} --out {folder}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    
+
     if result.returncode == 0:
-        # Construct the path of the signed APK
+        # Extract the path of the signed APK from the output directory
         signed_apk_path = apk_path.replace('.apk', '-aligned-debugSigned.apk')
-        return signed_apk_path
+
+        # Check if the signed APK exists at the expected path
+        if os.path.exists(signed_apk_path):
+            st.write("APK signing successful!")
+            return signed_apk_path
+        else:
+            st.error("APK signing completed, but the signed file could not be found.")
+            return None
     else:
+        # Display the error message in a more user-friendly way
         st.error(f"Error signing APK: {result.stderr}")
         return None
 
@@ -99,6 +107,14 @@ if uploaded_file is not None or url_input:
     if uploaded_file is not None:
         # Save uploaded file
         input_path = os.path.join(upload_dir, uploaded_file.name)
+
+        # Rename file if it contains spaces, replacing with underscores or removing spaces
+        if " " in uploaded_file.name:
+            new_name = uploaded_file.name.replace(" ", "_")  # Replace spaces with underscores
+            new_input_path = os.path.join(upload_dir, new_name)
+            os.rename(input_path, new_input_path)
+            input_path = new_input_path  # Update input_path to new name
+
         with open(input_path, "wb") as f:
             f.write(uploaded_file.read())
     elif url_input:
