@@ -5,41 +5,31 @@ import shutil
 import zipfile
 import requests
 
-
-def debug_apk(input_path, output_dir):
-    """
-    Run the apk-mitm command to debug the APK file.
-    
-    Args:
-        input_path (str): Path to the APK file to be processed.
-        output_dir (str): Directory where the output will be saved.
-        
-    Returns:
-        str: Path to the output APK if successful, None if failed.
-    """
+# Function to debug APK file
+def debug_apk(input_path, output_dir): 
     # Run apk-mitm command
     command = f"apk-mitm {input_path} -o {output_dir}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-    # Check if the command was successful
-    if result.returncode != 0:
-        st.error(f"Error running apk-mitm: {result.stderr}")
+    if result.returncode == 0:
+        # Extract the patched file name from stdout
+        output_file_name = result.stdout.split("Patched file: ")[-1].strip()
+        output_path = os.path.join(output_dir, output_file_name)
+        return output_path
+    else:
+        st.error(f"Error debugging APK: {result.stderr}")
         return None
 
-    # Assuming the output APK file is in the output directory
-    output_apk_path = os.path.join(output_dir, os.path.basename(input_path))  # Adjust this based on your output structure
-    return output_apk_path
-
-
+# Function to process XAPK file
 def process_xapk(xapk_path):
     """
-    Process XAPK file: rename to ZIP, extract contents, run apk-mitm, and return the signed APK.
+    Process XAPK file: rename to ZIP, extract contents, merge with APKEditor.jar, and sign the APK.
     
     Args:
-        xapk_path (str): Path to the XAPK file.
+        xapk_path (str): Path to the XAPK file
         
     Returns:
-        str: Path to the signed APK if successful, None if failed.
+        str: Path to the signed APK if successful, None if failed
     """
     try:
         # Get the directory and filename without extension
@@ -52,45 +42,154 @@ def process_xapk(xapk_path):
         
         # Rename XAPK to ZIP and extract contents
         shutil.move(xapk_path, zip_path)
-
-        # Extract the zip file
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extract_dir)
-
-        # Call debug_apk (assuming you want to run it on an APK file located in the extracted directory)
-        apk_file_path = os.path.join(extract_dir, 'your_apk_file.apk')  # Adjust based on your extracted files
-        signed_apk_path = debug_apk(apk_file_path, extract_dir)
-
-        # Ensure signed_apk_path is valid before opening
-        if signed_apk_path:
-            with open(signed_apk_path, "rb") as f:
-                # Do something with the signed APK file
-                # For example, you could read the contents or provide a download link
-                st.download_button("Download Signed APK", data=f, file_name=os.path.basename(signed_apk_path))
-
-        return signed_apk_path
-
+        
+        # Remove the ZIP file after extraction
+        os.remove(zip_path)
+        
+        # Run APKEditor.jar command to merge the extracted files
+        command = f'java -jar APKEditor.jar m -i "{extract_dir}"'
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            # Define the path for the merged APK
+            merged_apk_path = os.path.join(folder, f"{name_without_ext}_merged.apk")
+            st.write(f"Merged APK created at: {merged_apk_path}")
+            
+            # Proceed to sign the merged APK
+            signed_apk_path = process_sign(merged_apk_path)
+            return signed_apk_path
+        else:
+            st.error(f"Error merging APK: {result.stderr}")
+            return None
+            
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"Error processing XAPK: {str(e)}")
+        # Clean up in case of error
+        shutil.rmtree(extract_dir, ignore_errors=True)
         return None
 
-
-# Streamlit UI
-st.title("XAPK to APK Processor")
-uploaded_file = st.file_uploader("Upload XAPK file", type=["xapk"])
-
-if uploaded_file:
-    # Save the uploaded file temporarily
-    xapk_path = os.path.join("temp_dir", uploaded_file.name)
-    os.makedirs("temp_dir", exist_ok=True)
+# Function to sign APK file
+def process_sign(apk_path):
+    """
+    Sign the APK file using uber-apk-signer.
     
-    with open(xapk_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    Args:
+        apk_path (str): Path to the APK file to be signed.
+        
+    Returns:
+        str: Path to the signed APK if successful, None if failed.
+    """
+    folder = os.path.dirname(apk_path)
+    command = f"java -jar uber-apk-signer.jar --apks {apk_path}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-    # Process the uploaded XAPK file
-    signed_apk = process_xapk(xapk_path)
+    if result.returncode == 0:
+        # Extract the path of the signed APK from the output directory
+        signed_apk_path = apk_path.replace('.apk', '-aligned-debugSigned.apk')
 
-    if signed_apk:
-        st.success("APK processed successfully!")
+        # Check if the signed APK exists at the expected path
+        if os.path.exists(signed_apk_path):
+            st.write("APK signing successful!")
+            return signed_apk_path
+        else:
+            st.error("APK signing completed, but the signed file could not be found.")
+            return None
     else:
-        st.error("Failed to process the APK.")
+        # Display the error message in a more user-friendly way
+        st.error(f"Error signing APK: {result.stderr}")
+        return None
+
+# Streamlit app interface
+st.title("APK File Processor")
+
+# File upload
+uploaded_file = st.file_uploader("Upload APK file", type=['apk', 'xapk', 'apks'])
+
+# URL upload
+url_input = st.text_input("Or enter APK URL")
+
+# Radio buttons to select the processing type
+processing_option = st.radio("Choose the processing type:", ('Process XAPK', 'Sign APK', 'Debug APK'))
+
+if uploaded_file is not None or url_input:
+    # Create directories if they don't exist
+    upload_dir = "uploads"
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir)
+
+    if uploaded_file is not None:
+        # Save uploaded file
+        input_path = os.path.join(upload_dir, uploaded_file.name)
+        
+        # Write the uploaded file to the filesystem
+        with open(input_path, "wb") as f:
+            f.write(uploaded_file.read())
+
+        # Now that the file is saved, rename it if it contains spaces
+        if " " in uploaded_file.name:
+            new_name = uploaded_file.name.replace(" ", "_")  # Replace spaces with underscores
+            new_input_path = os.path.join(upload_dir, new_name)
+
+            # Only rename if the new name is different
+            if new_input_path != input_path:
+                os.rename(input_path, new_input_path)
+                input_path = new_input_path  # Update input_path to new name
+
+    elif url_input:
+        # Download APK from URL
+        st.write("Downloading APK from URL...")
+        response = requests.get(url_input)
+        if response.status_code == 200:
+            input_path = os.path.join(upload_dir, os.path.basename(url_input))
+            with open(input_path, "wb") as f:
+                f.write(response.content)
+        else:
+            st.error("Failed to download APK from URL. Please check the URL and try again.")
+            st.stop()
+
+    # Define output directory for the processed APK
+    output_dir = upload_dir
+
+    # Execute the process based on user choice
+    if processing_option == 'Process XAPK' and input_path.endswith('.xapk'):
+        st.write("Processing XAPK...")
+        result = process_xapk(input_path)
+    elif processing_option == 'Sign APK' and input_path.endswith('.apk'):
+        st.write("Signing APK...")
+        result = process_sign(input_path)
+    elif processing_option == 'Debug APK' and input_path.endswith('.apk'):
+        st.write("Debugging APK...")
+        output_path = debug_apk(input_path, output_dir)
+    else:
+        st.error("The selected process is not compatible with the uploaded file type. Please ensure the file type matches your selection.")
+        output_path = None
+
+    # Handle the result of processing
+    if output_path:
+        st.success("APK processed successfully!")
+        st.write("Output path:")
+        st.text(output_path)
+
+        # Provide download link for the processed APK file
+        if os.path.exists(output_path):
+            with open(output_path, "rb") as f:
+                file_data = f.read()
+                st.download_button(
+                    label="Download Processed APK",
+                    data=file_data,
+                    file_name=os.path.basename(output_path),
+                    mime="application/vnd.android.package-archive"
+                )
+        else:
+            st.error("Processed APK file not found. Please try again.")
+    else:
+        st.error("Failed to process APK. Please try again.")
+
+    # Clean up the uploaded and processed files
+    def cleanup_files():
+        shutil.rmtree(upload_dir, ignore_errors=True)
+
+    # Cleanup is done after download button appears to ensure the file is available for download
+    cleanup_files()
