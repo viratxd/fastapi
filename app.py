@@ -36,7 +36,7 @@ def process_xapk(xapk_path):
         # Run APKEditor.jar command to merge the extracted files
         command = f"java -jar APKEditor.jar m -i {extract_dir}"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        st.write(f"Merged APK created at: {result}")
+       # st.write(f"Merged APK created at: {result}")
         if result:
             # Define the path for the merged APK
             merged_apk_path = os.path.join(folder, f"{name_without_ext}_merged.apk")
