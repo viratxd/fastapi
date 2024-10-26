@@ -5,6 +5,20 @@ import shutil
 import zipfile
 import requests
 
+
+def debug_apk(input_path):
+    # Run apk-mitm command
+    command = f"java -jar uber-apk-signer.jar --apks {input_path}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    st.write(f"Processed APK file found at: {result}")
+    # Check if the process was successful
+    if result.returncode == 0:
+        out_path = input_path.replace('.apk', '-aligned-debugSigned.apk')
+        return out_path
+    else:
+        st.error(f"Error processing APK: {result.stderr}")
+        return None
+
 # Function to process XAPK file
 def process_xapk(xapk_path):
     """
@@ -138,9 +152,15 @@ if uploaded_file is not None or url_input:
     if processing_option == 'Process XAPK' and input_path.endswith('.xapk'):
         st.write("Processing XAPK...")
         result = process_xapk(input_path)
+    elif processing_option == 'Debug APK' and input_path.endswith('.apk'):
+        st.write("Debugging APK...")
+        result = debug_apk(input_path)
+
     elif processing_option == 'Sign APK' and input_path.endswith('.apk'):
         st.write("Signing APK...")
         result = process_sign(input_path)
+
+
     else:
         st.error("The selected process is not compatible with the uploaded file type. Please ensure the file type matches your selection.")
         result = None
