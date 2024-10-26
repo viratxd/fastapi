@@ -110,7 +110,8 @@ uploaded_file = st.file_uploader("Upload APK file", type=['apk', 'xapk', 'apks']
 url_input = st.text_input("Or enter APK URL")
 
 # Radio buttons to select the processing type
-processing_option = st.radio("Choose the processing type:", ('Process XAPK', 'Sign APK'))
+processing_option = st.radio("Choose the processing type:", ('Process XAPK + Signed', 'Sign APK', 'Debug APK'))
+
 
 if uploaded_file is not None or url_input:
     # Create directories if they don't exist
