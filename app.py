@@ -107,16 +107,21 @@ if uploaded_file is not None or url_input:
     if uploaded_file is not None:
         # Save uploaded file
         input_path = os.path.join(upload_dir, uploaded_file.name)
+        
+        # Write the uploaded file to the filesystem
+        with open(input_path, "wb") as f:
+            f.write(uploaded_file.read())
 
-        # Rename file if it contains spaces, replacing with underscores or removing spaces
+        # Now that the file is saved, rename it if it contains spaces
         if " " in uploaded_file.name:
             new_name = uploaded_file.name.replace(" ", "_")  # Replace spaces with underscores
             new_input_path = os.path.join(upload_dir, new_name)
-            os.rename(input_path, new_input_path)
-            input_path = new_input_path  # Update input_path to new name
 
-        with open(input_path, "wb") as f:
-            f.write(uploaded_file.read())
+            # Only rename if the new name is different
+            if new_input_path != input_path:
+                os.rename(input_path, new_input_path)
+                input_path = new_input_path  # Update input_path to new name
+
     elif url_input:
         # Download APK from URL
         st.write("Downloading APK from URL...")
