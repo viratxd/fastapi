@@ -9,7 +9,7 @@ def process_apk(input_path, output_dir):
     # Run apk-mitm command
     command = f"java -jar uber-apk-signer.jar --apks {input_path}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    #st.write(f"Processed APK file found at: {result}")
+    st.write(f"Processed APK file found at: {result}")
     # Check if the process was successful
     if result.returncode == 0:
         out_path = input_path.replace('.apk', '-aligned-debugSigned.apk')
