@@ -6,18 +6,11 @@ import zipfile
 import requests
 
 
-def debug_apk(input_path):
+def debug_apk(input_path, output_dir):
     # Run apk-mitm command
-    command = f"java -jar uber-apk-signer.jar --apks {input_path}"
+    command = f"apk-mitm {input_path} -o {output_dir}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    st.write(f"Processed APK file found at: {result}")
-    # Check if the process was successful
-    if result.returncode == 0:
-        out_path = input_path.replace('.apk', '-aligned-debugSigned.apk')
-        return out_path
-    else:
-        st.error(f"Error processing APK: {result.stderr}")
-        return None
+    return result
 
 # Function to process XAPK file
 def process_xapk(xapk_path):
@@ -159,7 +152,8 @@ if uploaded_file is not None or url_input:
         result = process_sign(input_path)
     elif processing_option == 'Debug APK' and input_path.endswith('.apk'):
         st.write("Debugging APK...")
-        result = debug_apk(input_path)
+        output_dir = upload_dir
+        result = debug_apk(input_path,output_dir)
 
 
 
