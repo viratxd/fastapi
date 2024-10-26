@@ -153,13 +153,14 @@ if uploaded_file is not None or url_input:
     if processing_option == 'Process XAPK' and input_path.endswith('.xapk'):
         st.write("Processing XAPK...")
         result = process_xapk(input_path)
+    
+    elif processing_option == 'Sign APK' and input_path.endswith('.apk'):
+        st.write("Signing APK...")
+        result = process_sign(input_path)
     elif processing_option == 'Debug APK' and input_path.endswith('.apk'):
         st.write("Debugging APK...")
         result = debug_apk(input_path)
 
-    elif processing_option == 'Sign APK' and input_path.endswith('.apk'):
-        st.write("Signing APK...")
-        result = process_sign(input_path)
 
 
     else:
