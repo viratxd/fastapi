@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -10,12 +10,9 @@ from typing import Optional
 import uvicorn
 
 app = FastAPI(title="APK File Processor")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
-templates = Jinja2Templates(directory="frontend/templates")
-
-# Ensure upload directory exists
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
@@ -64,7 +61,7 @@ def cleanup_files():
     shutil.rmtree(UPLOAD_DIR, ignore_errors=True)
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request):
+async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/process/xapk")
@@ -72,8 +69,12 @@ async def process_xapk_file(file: UploadFile = File(...)):
     if not file.filename.endswith('.xapk'):
         raise HTTPException(status_code=400, detail="File must be an XAPK")
     file_path = os.path.join(UPLOAD_DIR, file.filename.replace(" ", "_"))
+    
+    # Stream the file to disk
     with open(file_path, "wb") as f:
-        f.write(await file.read())
+        while chunk := await file.read(1024 * 1024):  # Read in 1MB chunks
+            f.write(chunk)
+    
     output_path = process_xapk(file_path)
     if output_path and os.path.exists(output_path):
         return FileResponse(output_path, filename=os.path.basename(output_path))
@@ -85,8 +86,11 @@ async def sign_apk_file(file: UploadFile = File(...)):
     if not file.filename.endswith('.apk'):
         raise HTTPException(status_code=400, detail="File must be an APK")
     file_path = os.path.join(UPLOAD_DIR, file.filename.replace(" ", "_"))
+    
     with open(file_path, "wb") as f:
-        f.write(await file.read())
+        while chunk := await file.read(1024 * 1024):
+            f.write(chunk)
+    
     output_path = process_sign(file_path)
     if output_path and os.path.exists(output_path):
         return FileResponse(output_path, filename=os.path.basename(output_path))
@@ -98,8 +102,11 @@ async def debug_apk_file(file: UploadFile = File(...)):
     if not file.filename.endswith('.apk'):
         raise HTTPException(status_code=400, detail="File must be an APK")
     file_path = os.path.join(UPLOAD_DIR, file.filename.replace(" ", "_"))
+    
     with open(file_path, "wb") as f:
-        f.write(await file.read())
+        while chunk := await file.read(1024 * 1024):
+            f.write(chunk)
+    
     output_path = debug_apk(file_path, UPLOAD_DIR)
     if output_path and os.path.exists(output_path):
         return FileResponse(output_path, filename=os.path.basename(output_path))
@@ -107,4 +114,4 @@ async def debug_apk_file(file: UploadFile = File(...)):
     raise HTTPException(status_code=500, detail="Failed to debug APK")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=600)  # Increased timeout
