@@ -1,0 +1,9 @@
+#dropZone:hover {
+    background-color: #f9fafb;
+    border-color: #2563eb;
+}
+
+input[type="radio"]:checked {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
