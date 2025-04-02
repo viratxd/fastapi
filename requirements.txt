@@ -1,3 +1,6 @@
-streamlit
+
 numpy
 pandas
+fastapi
+uvicorn
+jinja2
